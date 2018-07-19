@@ -17,6 +17,7 @@ $sock = socket_create( AF_INET, SOCK_STREAM, SOL_TCP );
 socket_listen($sock);
 echo "SOCKET LISTEN {$host}:{$port}\n";
 
+$prevbuf = "";
 while (1)
 {
 	foreach ( $nodes as $n => $nd )
@@ -32,24 +33,26 @@ while (1)
 		while ( socket_recv( $nd, $buf, 1024, MSG_DONTWAIT ) )
 		{
 			$buf = trim($buf);
-			echo "BUFFER $n : $buf\n";
+			if ( $prevbuf == $buf )
+				break;
 
+			echo "BUFFER $n : $buf\n";
 			switch ( $buf )
 			{
-				case "quit":
-					break 4;
 				case "dump":
 					print_r( $records );
 					break;
 				default:
+					if ( ! in_array($buf, $records) )
+					{
+						echo "ADD RECORD $buf\n";
+						$records[] = $buf;
+					}
 					break;
 			}
-			if ( ! in_array($buf, $records) )
-			{
-				echo "ADD RECORD $buf\n";
-				$records[] = $buf;
-				broadcast( $nodes, $buf );
-			}
+
+			broadcast( $nodes, $buf );
+			$prevbuf = $buf;
 			break;
 		}
 	}
